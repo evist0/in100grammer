@@ -22,21 +22,35 @@ model UserDetails {
 
   description String?
 
-  followers Int
-  following Int
-
+  followers   Int
+  following   Int
   postsAmount Int
-  lastPost    DateTime?
+
+  lastPost DateTime?
 
   phone String?
   email String?
   site  String?
 
-  business         Boolean
-  businessCategory String?
+  potentiallyBusiness Boolean
+  business            Boolean
+  businessCategory    String?
 
-  countryCode String?
-  address     String?
+  countryCode   String?
+  countryReason String?
+}
 
-  haveGoods Boolean
+model Session {
+  id String @id
+
+  busy Boolean
+}
+
+model Proxy {
+  host     String @id
+  port     String
+  login    String
+  password String
+
+  busy Boolean
 }

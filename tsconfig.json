@@ -35,6 +35,12 @@
       ],
       "@app/instagram/*": [
         "libs/instagram/src/*"
+      ],
+      "@app/session": [
+        "libs/session/src"
+      ],
+      "@app/session/*": [
+        "libs/session/src/*"
       ]
     }
   }

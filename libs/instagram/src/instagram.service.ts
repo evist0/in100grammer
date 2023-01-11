@@ -5,6 +5,7 @@ import { AxiosError } from 'axios';
 
 import { FriendshipsResult } from './types/friendships.result';
 import { InfoResult } from './types/info.result';
+import { PostsResult } from './types/posts.result';
 
 @Injectable()
 export class InstagramService {
@@ -60,16 +61,33 @@ export class InstagramService {
     return this.friendshipMethod(userId, followingAmount, 'following');
   }
 
-  async getUserInfo(userId: string) {
+  async getUserInfo(userId: string): Promise<InfoResult['user']> {
     const { data } = await firstValueFrom(
       this.httpClient.get<InfoResult>(`users/${userId}/info`).pipe(
         catchError((e: AxiosError) => {
-          console.log(e.response);
           throw e;
         }),
       ),
     );
 
     return data.user;
+  }
+
+  async getUserPosts(userId: string) {
+    const { data } = await firstValueFrom(
+      this.httpClient
+        .get<PostsResult>(`feed/user/${userId}`, {
+          params: {
+            limit: 12,
+          },
+        })
+        .pipe(
+          catchError((e: AxiosError) => {
+            throw e;
+          }),
+        ),
+    );
+
+    return data.items;
   }
 }

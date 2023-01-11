@@ -21,6 +21,12 @@ export const USERS_QUEUE = Symbol('USERS_QUEUE');
           options: {
             urls: [`amqp://${user}:${password}@${host}`],
             queue,
+            noAck: false,
+            persistent: true,
+            queueOptions: {
+              durable: true,
+              'x-message-deduplication': true,
+            },
           },
         });
       },

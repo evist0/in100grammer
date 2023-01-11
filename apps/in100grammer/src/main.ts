@@ -19,8 +19,13 @@ async function bootstrap() {
     options: {
       urls: [`amqp://${user}:${password}@${host}`],
       queue: queueName,
+      noAck: false,
+      persistent: true,
       queueOptions: {
         durable: true,
+        arguments: {
+          'x-message-deduplication': true,
+        },
       },
     },
   });

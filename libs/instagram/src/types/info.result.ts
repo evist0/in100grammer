@@ -12,7 +12,6 @@ export type InfoResult = {
 
     follower_count: number;
     following_count: number;
-
     media_count: number;
 
     external_url: string;
@@ -20,5 +19,8 @@ export type InfoResult = {
     public_email: string;
 
     category: string;
+
+    latitude: number;
+    longitude: number;
   };
 };

@@ -33,6 +33,56 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
 
+  in100grammer-0:
+    build:
+      dockerfile: apps/in100grammer/Dockerfile
+      context: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "3000" ]
+      interval: 5s
+      timeout: 15s
+      retries: 1
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_HOST: "rabbitmq:5672"
+      DATABASE_URL: "postgresql://admin:123456As@postgres:5432/database?schema=public"
+
+  in100grammer-1:
+    build:
+      dockerfile: apps/in100grammer/Dockerfile
+      context: .
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "3000" ]
+      interval: 5s
+      timeout: 15s
+      retries: 1
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_HOST: "rabbitmq:5672"
+      DATABASE_URL: "postgresql://admin:123456As@postgres:5432/database?schema=public"
+
+  in100grammer-2:
+    build:
+      dockerfile: apps/in100grammer/Dockerfile
+      context: .
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "3000" ]
+      interval: 5s
+      timeout: 15s
+      retries: 1
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_HOST: "rabbitmq:5672"
+      DATABASE_URL: "postgresql://admin:123456As@postgres:5432/database?schema=public"
+
 volumes:
   rabbitmq:
   postgres:
