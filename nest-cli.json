@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/users-getter/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/users-getter/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/users-getter",
+  "projects": {
+    "users-getter": {
+      "type": "application",
+      "root": "apps/users-getter",
+      "entryFile": "main",
+      "sourceRoot": "apps/users-getter/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/users-getter/tsconfig.app.json"
+      }
+    },
+    "prisma": {
+      "type": "library",
+      "root": "libs/prisma",
+      "entryFile": "index",
+      "sourceRoot": "libs/prisma/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/prisma/tsconfig.lib.json"
+      }
+    },
+    "users-queue": {
+      "type": "library",
+      "root": "libs/users-queue",
+      "entryFile": "index",
+      "sourceRoot": "libs/users-queue/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/users-queue/tsconfig.lib.json"
+      }
+    },
+    "instagram-requests": {
+      "type": "library",
+      "root": "libs/instagram",
+      "entryFile": "index",
+      "sourceRoot": "libs/instagram/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/instagram/tsconfig.lib.json"
+      }
+    }
+  }
+}
