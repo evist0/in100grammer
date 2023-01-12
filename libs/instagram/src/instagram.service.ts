@@ -1,73 +1,106 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import { catchError, firstValueFrom } from 'rxjs';
+import { NoFreeResourcesError, SessionService } from '@app/session';
+import { concat, defer, EMPTY, firstValueFrom, from, map, mergeMap, Observable, retry, tap } from 'rxjs';
 import { AxiosError } from 'axios';
 
-import { FriendshipsResult } from './types/friendships.result';
+import { FriendshipsResult, FriendshipUser } from './types/friendships.result';
 import { InfoResult } from './types/info.result';
 import { PostsResult } from './types/posts.result';
 
 @Injectable()
 export class InstagramService {
-  constructor(private readonly httpClient: HttpService) {}
+  constructor(
+    private readonly httpClient: HttpService,
+    private readonly logger: Logger,
+    private readonly sessionService: SessionService,
+  ) {}
 
-  private async friendshipMethod(
-    userId: string,
-    expectedAmount: number,
-    method: string,
-  ) {
-    const result: string[] = [];
-
-    let currentOffset = 0;
-
-    // У инстаграма бага в АПИ - флаг has_more не работает. Так что идём пагинацию руками по 200, пока не пройдём всю
-    // TODO: возможно, есть элегантное решение через потоки
-    while (currentOffset < expectedAmount) {
-      const response = await firstValueFrom(
-        this.httpClient.get<FriendshipsResult>(
-          `friendships/${userId}/${method}`,
-          {
-            params: {
-              count: 200,
-              maxCount: currentOffset,
-            },
+  private friendshipMethod(userId: string, expectedAmount: number, method: string) {
+    const fetchPage = (offset = 0): Observable<FriendshipsResult> =>
+      this.httpClient
+        .get<FriendshipsResult>(`friendships/${userId}/${method}`, {
+          httpsAgent: this.sessionService.httpsAgent,
+          headers: {
+            Cookie: `sessionid=${this.sessionService.sessionId}`,
           },
-        ),
+          params: {
+            count: 200,
+            maxCount: offset,
+          },
+        })
+        .pipe(
+          map((res) => res.data),
+          tap(() => this.logger.log(`[${userId}]: Processed ${offset}/${expectedAmount} ${method}`)),
+          retry({
+            delay: async (error) => {
+              if (error instanceof AxiosError) {
+                this.logger.error(`[${userId}]: AxiosError ${error.message}`);
+                this.logger.error(error.response.data);
+
+                if (error.response.data.message === 'checkpoint_required') {
+                  await this.sessionService.changeSession(true);
+                }
+              }
+
+              if (error instanceof NoFreeResourcesError) {
+                throw error;
+              }
+
+              this.logger.error(`Unknown error:`);
+              this.logger.error(error);
+            },
+          }),
+        );
+
+    const getPage = (offset = 0) =>
+      defer(() => fetchPage(offset)).pipe(
+        mergeMap(({ users, page_size }) => {
+          const hasNext = offset + page_size < expectedAmount;
+
+          const items$ = from(users);
+          const next$: Observable<FriendshipUser> = hasNext ? getPage(offset + page_size) : EMPTY;
+
+          return concat(items$, next$);
+        }),
       );
 
-      result.push(
-        ...response.data.users
-          .filter((u) => !u.is_private)
-          .map((u) => u.pk.toString()),
-      );
-
-      currentOffset = currentOffset + response.data.page_size;
-    }
-
-    return result;
+    return getPage(0);
   }
 
-  async getFollowers(
-    userId: string,
-    followersAmount: number,
-  ): Promise<string[]> {
+  getFollowers(userId: string, followersAmount: number): Observable<FriendshipUser> {
     return this.friendshipMethod(userId, followersAmount, 'followers');
   }
 
-  async getFollowing(
-    userId: string,
-    followingAmount: number,
-  ): Promise<string[]> {
+  getFollowings(userId: string, followingAmount: number): Observable<FriendshipUser> {
     return this.friendshipMethod(userId, followingAmount, 'following');
   }
 
   async getUserInfo(userId: string): Promise<InfoResult['user']> {
     const { data } = await firstValueFrom(
-      this.httpClient.get<InfoResult>(`users/${userId}/info`).pipe(
-        catchError((e: AxiosError) => {
-          throw e;
-        }),
-      ),
+      this.httpClient
+        .get<InfoResult>(`users/${userId}/info`, {
+          httpsAgent: this.sessionService.httpsAgent,
+          headers: {
+            Cookie: `sessionid=${this.sessionService.sessionId}`,
+          },
+        })
+        .pipe(
+          retry({
+            delay: async (error) => {
+              if (error instanceof AxiosError) {
+                this.logger.error(`[${userId}]: AxiosError ${error.message}`);
+                this.logger.error(error);
+              }
+
+              if (error instanceof NoFreeResourcesError) {
+                throw error;
+              }
+
+              await this.sessionService.changeSession();
+            },
+          }),
+        ),
     );
 
     return data.user;
@@ -77,13 +110,28 @@ export class InstagramService {
     const { data } = await firstValueFrom(
       this.httpClient
         .get<PostsResult>(`feed/user/${userId}`, {
+          httpsAgent: this.sessionService.httpsAgent,
+          headers: {
+            Cookie: `sessionid=${this.sessionService.sessionId}`,
+          },
           params: {
             limit: 12,
           },
         })
         .pipe(
-          catchError((e: AxiosError) => {
-            throw e;
+          retry({
+            delay: async (error) => {
+              if (error instanceof AxiosError) {
+                this.logger.error(`[${userId}]: AxiosError ${error.message}`);
+                this.logger.error(error);
+              }
+
+              if (error instanceof NoFreeResourcesError) {
+                throw error;
+              }
+
+              await this.sessionService.changeSession();
+            },
           }),
         ),
     );

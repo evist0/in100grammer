@@ -37,6 +37,7 @@ services:
     build:
       dockerfile: apps/in100grammer/Dockerfile
       context: .
+    depends_on: [ rabbitmq, postgres ]
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -52,9 +53,8 @@ services:
       DATABASE_URL: "postgresql://admin:123456As@postgres:5432/database?schema=public"
 
   in100grammer-1:
-    build:
-      dockerfile: apps/in100grammer/Dockerfile
-      context: .
+    image: in100grammer-in100grammer-0
+    depends_on: [ rabbitmq, postgres ]
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "nc", "-z", "localhost", "3000" ]
@@ -68,9 +68,8 @@ services:
       DATABASE_URL: "postgresql://admin:123456As@postgres:5432/database?schema=public"
 
   in100grammer-2:
-    build:
-      dockerfile: apps/in100grammer/Dockerfile
-      context: .
+    image: in100grammer-in100grammer-0
+    depends_on: [ rabbitmq, postgres ]
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "nc", "-z", "localhost", "3000" ]

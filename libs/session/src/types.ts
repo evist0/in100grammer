@@ -1,8 +1,8 @@
-import { ModuleMetadata, Type } from '@nestjs/common/interfaces';
-import { Proxy } from '@prisma/client';
+import { ModuleMetadata, Type } from '@nestjs/common';
+import { AxiosProxyConfig } from 'axios';
 
 export interface SessionOptions {
-  proxy: Proxy;
+  proxy: AxiosProxyConfig;
   sessionId: string;
 }
 

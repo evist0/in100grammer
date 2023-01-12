@@ -8,23 +8,17 @@ datasource db {
 }
 
 model User {
-  id      String       @id
-  details UserDetails?
-}
-
-model UserDetails {
   id   String @id
-  user User   @relation(fields: [id], references: [id])
 
-  username String
+  username String?
 
   fullName String?
 
   description String?
 
-  followers   Int
-  following   Int
-  postsAmount Int
+  followers   Int?
+  following   Int?
+  postsAmount Int?
 
   lastPost DateTime?
 
@@ -32,8 +26,8 @@ model UserDetails {
   email String?
   site  String?
 
-  potentiallyBusiness Boolean
-  business            Boolean
+  potentiallyBusiness Boolean?
+  business            Boolean?
   businessCategory    String?
 
   countryCode   String?
@@ -44,6 +38,7 @@ model Session {
   id String @id
 
   busy Boolean
+  dead Boolean
 }
 
 model Proxy {
@@ -53,4 +48,5 @@ model Proxy {
   password String
 
   busy Boolean
+  dead Boolean
 }

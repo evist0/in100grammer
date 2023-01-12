@@ -1,42 +1,52 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@app/prisma';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { INITIAL_PROXY_FILE, release, SessionService } from '@app/session';
+import { PrismaClient } from '@prisma/client';
+import * as fs from 'fs';
 
 import { AppModule } from './app.module';
+import { AllExceptionFilter } from './common/exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
+  try {
+    const app = await NestFactory.create(AppModule, { abortOnError: false });
 
-  const user = configService.get('RABBITMQ_USER');
-  const password = configService.get('RABBITMQ_PASS');
-  const host = configService.get('RABBITMQ_HOST');
-  const queueName = configService.get('RABBITMQ_USERS_QUEUE_NAME');
+    const sessionService = app.get(SessionService);
+    app.useGlobalFilters(new AllExceptionFilter(sessionService));
 
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.RMQ,
-    options: {
-      urls: [`amqp://${user}:${password}@${host}`],
-      queue: queueName,
-      noAck: false,
-      persistent: true,
-      queueOptions: {
-        durable: true,
-        arguments: {
-          'x-message-deduplication': true,
-        },
-      },
-    },
-  });
+    const prismaService = app.get(PrismaService);
+    prismaService.enableShutdownHooks(app);
 
-  const port = configService.get('PORT');
+    app.enableShutdownHooks();
 
-  await app.listen(port ?? 3000);
-  await app.startAllMicroservices();
+    const configService = app.get(ConfigService);
 
-  const prismaService = app.get(PrismaService);
-  await prismaService.enableShutdownHooks(app);
+    const port = configService.get('PORT');
+    await app.listen(port ?? 3000);
+  } catch (e) {
+    fs.access(INITIAL_PROXY_FILE, async (err) => {
+      if (err) {
+        return;
+      }
+
+      const initialProxy = JSON.parse(fs.readFileSync(INITIAL_PROXY_FILE, 'utf-8'));
+
+      const prisma = new PrismaClient();
+
+      await release(initialProxy, prisma);
+    });
+
+    throw e;
+  } finally {
+    fs.access(INITIAL_PROXY_FILE, (err) => {
+      if (err) {
+        return;
+      }
+
+      fs.unlinkSync(INITIAL_PROXY_FILE);
+    });
+  }
 }
 
 bootstrap();

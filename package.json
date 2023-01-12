@@ -6,17 +6,17 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "start:in100grammer": "nest start in100grammer --watch",
+    "start:in100grammer": "nest start in100grammer --debug",
     "test:eslint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
-    "test:prettier": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""
+    "test:prettier": "prettier \"apps/**/*.ts\" \"libs/**/*.ts\""
   },
   "dependencies": {
+    "@golevelup/nestjs-rabbitmq": "^3.4.0",
     "@nestjs/axios": "^1.0.1",
     "@nestjs/common": "^9.0.0",
     "@nestjs/config": "^2.2.0",
     "@nestjs/core": "^9.0.0",
     "@nestjs/mapped-types": "*",
-    "@nestjs/microservices": "^9.2.1",
     "@nestjs/platform-express": "^9.0.0",
     "@nestjs/throttler": "^3.1.0",
     "@prisma/client": "^4.8.1",

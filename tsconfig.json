@@ -24,12 +24,6 @@
       "@app/prisma/*": [
         "libs/prisma/src/*"
       ],
-      "@app/users-queue": [
-        "libs/users-queue/src"
-      ],
-      "@app/users-queue/*": [
-        "libs/users-queue/src/*"
-      ],
       "@app/instagram": [
         "libs/instagram/src"
       ],

@@ -1,42 +1,53 @@
 import { Logger, Module } from '@nestjs/common';
-import { UsersQueueModule } from '@app/users-queue';
-import { InstagramModule } from '@app/instagram';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { PrismaModule, PrismaService } from '@app/prisma';
+import { InstagramModule } from '@app/instagram';
+import { PrismaModule } from '@app/prisma';
 import { SessionModule } from '@app/session';
+import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 
 import { AppService } from './app.service';
 import { AppController } from './app.controller';
+import { DIRECT_EXCHANGE } from './app.consts';
 import { NominatimModule } from './nominatim/nominatim.module';
 import { CountryDetector } from './common/country-detector';
 
 @Module({
   imports: [
-    PrismaModule,
-    SessionModule.forRootAsync({
-      imports: [PrismaModule],
-      inject: [PrismaService],
-      useFactory: async (prisma: PrismaService) => {
-        const proxy = await prisma.proxy.findFirstOrThrow({
-          where: { busy: false },
-        });
-
-        const session = await prisma.session.findFirstOrThrow({
-          where: { busy: false },
-        });
-
-        return { proxy, sessionId: session.id };
-      },
-    }),
     ConfigModule.forRoot(),
-    UsersQueueModule,
+    SessionModule.forRoot(),
+    RabbitMQModule.forRootAsync(RabbitMQModule, {
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => {
+        const user = configService.get('RABBITMQ_USER');
+        const password = configService.get('RABBITMQ_PASS');
+        const host = configService.get('RABBITMQ_HOST');
+
+        return {
+          uri: `amqp://${user}:${password}@${host}`,
+          enableControllerDiscovery: true,
+          exchanges: [
+            {
+              name: DIRECT_EXCHANGE,
+              type: 'direct',
+            },
+          ],
+          channels: {
+            default: {
+              default: true,
+            },
+          },
+        };
+      },
+      inject: [ConfigService],
+    }),
+    PrismaModule,
     InstagramModule,
+    NominatimModule,
     ThrottlerModule.forRoot({
       ttl: 60 * 60, // 1h,
       limit: 200, // 200 requests,
     }),
-    NominatimModule,
   ],
   controllers: [AppController],
   providers: [
@@ -44,7 +55,7 @@ import { CountryDetector } from './common/country-detector';
     CountryDetector,
     {
       provide: Logger,
-      useFactory: () => new Logger('UsersGetter'),
+      useValue: new Logger(AppModule.name),
     },
   ],
 })

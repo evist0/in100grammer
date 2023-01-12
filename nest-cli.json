@@ -28,15 +28,6 @@
         "tsConfigPath": "libs/prisma/tsconfig.lib.json"
       }
     },
-    "users-queue": {
-      "type": "library",
-      "root": "libs/users-queue",
-      "entryFile": "index",
-      "sourceRoot": "libs/users-queue/src",
-      "compilerOptions": {
-        "tsConfigPath": "libs/users-queue/tsconfig.lib.json"
-      }
-    },
     "instagram-requests": {
       "type": "library",
       "root": "libs/instagram",
