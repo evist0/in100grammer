@@ -3,7 +3,7 @@ import { AxiosProxyConfig } from 'axios';
 
 export interface SessionOptions {
   proxy: AxiosProxyConfig;
-  sessionId: string;
+  sessionCookies: string;
 }
 
 export interface SessionOptionsFactory {

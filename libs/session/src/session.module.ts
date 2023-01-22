@@ -1,10 +1,10 @@
 import { DynamicModule, Global, Logger, Module } from '@nestjs/common';
 import { PrismaModule, PrismaService } from '@app/prisma';
+import * as fs from 'fs';
 
 import { SessionService } from './session.service';
 import { SESSION_OPTIONS } from './session.constants';
 import { get, INITIAL_PROXY_FILE } from './helpers';
-import * as fs from 'fs';
 
 @Global()
 @Module({})

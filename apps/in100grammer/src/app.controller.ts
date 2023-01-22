@@ -1,12 +1,10 @@
-import { Controller, Logger, Param, Post, UseGuards } from '@nestjs/common';
+import { Controller, Logger, Param, Post } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Throttle } from '@nestjs/throttler';
-import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import { NoFreeResourcesError } from '@app/session';
+import { RMQRoute } from 'nestjs-rmq';
 
 import { AppService } from './app.service';
-import { DIRECT_EXCHANGE, QUEUE_NAME } from './app.consts';
-import { RmqThrottlerGuard } from './common/rmq-throttler.guard';
-import { NoFreeResourcesError } from '@app/session';
+import { QUEUE_NAME } from './app.consts';
 
 @Controller()
 export class AppController {
@@ -16,7 +14,6 @@ export class AppController {
     private readonly logger: Logger,
   ) {}
 
-  @Throttle(200, 60 * 60)
   @Post('enqueue/:id')
   enqueue(@Param('id') id: string) {
     this.logger.log(`[${id}]: HTTP Enqueue`);
@@ -24,25 +21,14 @@ export class AppController {
     return this.appService.enqueue(id);
   }
 
-  @RabbitSubscribe({
-    routingKey: QUEUE_NAME,
-    exchange: DIRECT_EXCHANGE,
-    queue: QUEUE_NAME,
-    createQueueIfNotExists: true,
-    allowNonJsonMessages: true,
-    queueOptions: {
-      durable: true,
-      bindQueueArguments: {
-        'x-message-deduplication': true,
-      },
-    },
-  })
-  @UseGuards(RmqThrottlerGuard)
+  @RMQRoute(QUEUE_NAME)
   async process(id: string) {
     this.logger.log(`[${id}]: Processing started`);
 
     try {
       await this.appService.process(id);
+
+      this.logger.log(`[${id}]: Processing end`);
     } catch (e) {
       this.logger.error(e);
 

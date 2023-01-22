@@ -1,14 +1,13 @@
 import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { InstagramModule } from '@app/instagram';
 import { PrismaModule } from '@app/prisma';
 import { SessionModule } from '@app/session';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
+import { RMQModule } from 'nestjs-rmq';
 
 import { AppService } from './app.service';
 import { AppController } from './app.controller';
-import { DIRECT_EXCHANGE } from './app.consts';
+import { DIRECT_EXCHANGE, QUEUE_NAME } from './app.consts';
 import { NominatimModule } from './nominatim/nominatim.module';
 import { CountryDetector } from './common/country-detector';
 
@@ -16,38 +15,31 @@ import { CountryDetector } from './common/country-detector';
   imports: [
     ConfigModule.forRoot(),
     SessionModule.forRoot(),
-    RabbitMQModule.forRootAsync(RabbitMQModule, {
+    RMQModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => {
-        const user = configService.get('RABBITMQ_USER');
-        const password = configService.get('RABBITMQ_PASS');
-        const host = configService.get('RABBITMQ_HOST');
-
-        return {
-          uri: `amqp://${user}:${password}@${host}`,
-          enableControllerDiscovery: true,
-          exchanges: [
-            {
-              name: DIRECT_EXCHANGE,
-              type: 'direct',
-            },
-          ],
-          channels: {
-            default: {
-              default: true,
-            },
-          },
-        };
-      },
       inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        exchangeName: DIRECT_EXCHANGE,
+        connections: [
+          {
+            login: configService.get('RABBITMQ_USER'),
+            password: configService.get('RABBITMQ_PASSWORD'),
+            host: configService.get('RABBITMQ_HOST'),
+          },
+        ],
+        queueName: QUEUE_NAME,
+        isQueueDurable: true,
+        queueOptions: {
+          durable: true,
+          bindQueueArguments: {
+            'x-message-deduplication': true,
+          },
+        },
+      }),
     }),
     PrismaModule,
     InstagramModule,
     NominatimModule,
-    ThrottlerModule.forRoot({
-      ttl: 60 * 60, // 1h,
-      limit: 200, // 200 requests,
-    }),
   ],
   controllers: [AppController],
   providers: [

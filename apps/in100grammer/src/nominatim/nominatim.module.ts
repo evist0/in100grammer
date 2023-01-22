@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { HttpModule } from '@nestjs/axios';
+import { HttpModule } from 'nestjs-http-promise';
 import { SessionModule } from '@app/session';
 
 import { NominatimService } from './nominatim.service';

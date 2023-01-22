@@ -3,15 +3,15 @@ services:
     build: docker/rabbit-mq
     restart: unless-stopped
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - '5672:5672'
+      - '15672:15672'
     healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "5672" ]
+      test: ['CMD', 'nc', '-z', 'localhost', '5672']
       interval: 5s
       timeout: 15s
       retries: 1
     volumes:
-      - "rabbitmq:/var/lib/rabbitmq/mnesia/"
+      - 'rabbitmq:/var/lib/rabbitmq/mnesia/'
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
@@ -20,67 +20,18 @@ services:
     image: postgres:15.1-alpine3.17
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - '5432:5432'
     healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "5432" ]
+      test: ['CMD', 'nc', '-z', 'localhost', '5432']
       interval: 5s
       timeout: 15s
       retries: 1
     volumes:
-      - "postgres:/var/lib/postgresql/data"
+      - 'postgres:/var/lib/postgresql/data'
     environment:
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
-
-  in100grammer-0:
-    build:
-      dockerfile: apps/in100grammer/Dockerfile
-      context: .
-    depends_on: [ rabbitmq, postgres ]
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "3000" ]
-      interval: 5s
-      timeout: 15s
-      retries: 1
-    env_file:
-      - .env
-    environment:
-      RABBITMQ_HOST: "rabbitmq:5672"
-      DATABASE_URL: "postgresql://admin:123456As@postgres:5432/database?schema=public"
-
-  in100grammer-1:
-    image: in100grammer-in100grammer-0
-    depends_on: [ rabbitmq, postgres ]
-    restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "3000" ]
-      interval: 5s
-      timeout: 15s
-      retries: 1
-    env_file:
-      - .env
-    environment:
-      RABBITMQ_HOST: "rabbitmq:5672"
-      DATABASE_URL: "postgresql://admin:123456As@postgres:5432/database?schema=public"
-
-  in100grammer-2:
-    image: in100grammer-in100grammer-0
-    depends_on: [ rabbitmq, postgres ]
-    restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "3000" ]
-      interval: 5s
-      timeout: 15s
-      retries: 1
-    env_file:
-      - .env
-    environment:
-      RABBITMQ_HOST: "rabbitmq:5672"
-      DATABASE_URL: "postgresql://admin:123456As@postgres:5432/database?schema=public"
 
 volumes:
   rabbitmq:

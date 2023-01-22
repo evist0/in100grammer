@@ -10,7 +10,7 @@ import { SessionOptions } from './types';
 export class SessionService implements OnModuleDestroy {
   private _proxy: AxiosProxyConfig;
 
-  private _sessionId: string;
+  private _sessionCookies: string;
 
   private _httpsAgent: HttpsProxyAgent;
 
@@ -20,7 +20,7 @@ export class SessionService implements OnModuleDestroy {
     private readonly logger: Logger,
   ) {
     this._proxy = options.proxy;
-    this._sessionId = options.sessionId;
+    this._sessionCookies = options.sessionCookies;
 
     this._httpsAgent = new HttpsProxyAgent(
       `${this._proxy.protocol}://${this._proxy.auth.username}:${this._proxy.auth.password}@${this._proxy.host}:${this._proxy.port}`,
@@ -31,24 +31,21 @@ export class SessionService implements OnModuleDestroy {
     return this._httpsAgent;
   }
 
-  get sessionId(): string {
-    return this._sessionId;
+  get sessionCookies(): string {
+    return this._sessionCookies;
   }
 
-  async changeSession(shouldMarkDead = false) {
+  async changeSession() {
     this.logger.log(`Changing session`);
 
-    const currentResources = { proxy: this._proxy, sessionId: this._sessionId };
-    if (shouldMarkDead) {
-      await markDead(currentResources, this.prisma);
-    } else {
-      await release(currentResources, this.prisma);
-    }
+    const currentResources = { proxy: this._proxy, sessionId: this._sessionCookies };
+
+    await markDead(currentResources, this.prisma);
 
     const { proxy, sessionId } = await get(this.prisma);
 
     this._proxy = proxy;
-    this._sessionId = sessionId;
+    this._sessionCookies = sessionId;
 
     this._httpsAgent = new HttpsProxyAgent(
       `${this._proxy.protocol}://${this._proxy.auth.username}:${this._proxy.auth.password}@${this._proxy.host}:${this._proxy.port}`,
@@ -59,6 +56,6 @@ export class SessionService implements OnModuleDestroy {
   }
 
   async onModuleDestroy() {
-    await release({ proxy: this._proxy, sessionId: this._sessionId }, this.prisma);
+    await release({ proxy: this._proxy, iam: this._sessionCookies }, this.prisma);
   }
 }

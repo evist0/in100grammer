@@ -18,24 +18,12 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@app/prisma": [
-        "libs/prisma/src"
-      ],
-      "@app/prisma/*": [
-        "libs/prisma/src/*"
-      ],
-      "@app/instagram": [
-        "libs/instagram/src"
-      ],
-      "@app/instagram/*": [
-        "libs/instagram/src/*"
-      ],
-      "@app/session": [
-        "libs/session/src"
-      ],
-      "@app/session/*": [
-        "libs/session/src/*"
-      ]
+      "@app/prisma": ["libs/prisma/src"],
+      "@app/prisma/*": ["libs/prisma/src/*"],
+      "@app/instagram": ["libs/instagram/src"],
+      "@app/instagram/*": ["libs/instagram/src/*"],
+      "@app/session": ["libs/session/src"],
+      "@app/session/*": ["libs/session/src/*"]
     }
   }
 }

@@ -21,15 +21,15 @@ export const proxyAdapter = (databaseProxy: Proxy): AxiosProxyConfig => ({
 
 export async function get(prisma: PrismaClient) {
   let proxy: AxiosProxyConfig;
-  let sessionId: string;
+  let iam: string;
 
   try {
     proxy = await getProxy(prisma);
-    sessionId = await getSession(prisma);
+    iam = await getIam(prisma);
 
-    return { proxy, sessionId };
+    return { proxy, iam };
   } catch (e) {
-    await release({ proxy, sessionId }, prisma);
+    await release({ proxy, iam }, prisma);
     throw e;
   }
 }
@@ -61,44 +61,44 @@ export async function getProxy(prisma: PrismaClient) {
   return proxy;
 }
 
-export async function getSession(prisma: PrismaClient) {
+export async function getIam(prisma: PrismaClient) {
   const tryLock = async () => {
-    let availableSession;
+    let availableIam;
     try {
-      availableSession = await prisma.session.findFirstOrThrow({
+      availableIam = await prisma.accounts.findFirstOrThrow({
         where: { busy: false, dead: false },
       });
     } catch (e) {
-      throw new NoFreeResourcesError('Not found available session');
+      throw new NoFreeResourcesError('Not found available account');
     }
 
-    const updated = await prisma.session.updateMany({
-      where: { id: availableSession.id, busy: false },
+    const updated = await prisma.accounts.updateMany({
+      where: { iam: availableIam.iam, busy: false },
       data: { busy: true },
     });
 
-    return updated.count ? availableSession.id : undefined;
+    return updated.count ? availableIam.id : undefined;
   };
 
-  let sesion = undefined;
-  while (sesion === undefined) {
-    sesion = tryLock();
+  let iam = undefined;
+  while (iam === undefined) {
+    iam = tryLock();
   }
 
-  return sesion;
+  return iam;
 }
 
-export async function release(resources: { proxy?: AxiosProxyConfig; sessionId?: string }, prisma: PrismaClient) {
+export async function release(resources: { proxy?: AxiosProxyConfig; iam?: string }, prisma: PrismaClient) {
   if (resources.proxy) {
     await prisma.proxy.update({ where: { host: resources.proxy.host }, data: { busy: false } });
   }
 
-  if (resources.sessionId) {
-    await prisma.session.update({ where: { id: resources.sessionId }, data: { busy: false } });
+  if (resources.iam) {
+    await prisma.accounts.update({ where: { iam: resources.iam }, data: { busy: false } });
   }
 }
 
-export async function markDead(resources: { proxy?: AxiosProxyConfig; sessionId?: string }, prisma: PrismaClient) {
+export async function markDead(resources: { proxy?: AxiosProxyConfig; iam?: string }, prisma: PrismaClient) {
   if (resources.proxy) {
     await prisma.proxy.update({
       where: { host: resources.proxy.host },
@@ -106,9 +106,9 @@ export async function markDead(resources: { proxy?: AxiosProxyConfig; sessionId?
     });
   }
 
-  if (resources.sessionId) {
-    await prisma.session.update({
-      where: { id: resources.sessionId },
+  if (resources.iam) {
+    await prisma.accounts.update({
+      where: { iam: resources.iam },
       data: { busy: false, dead: true },
     });
   }

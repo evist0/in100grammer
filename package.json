@@ -11,19 +11,15 @@
     "test:prettier": "prettier \"apps/**/*.ts\" \"libs/**/*.ts\""
   },
   "dependencies": {
-    "@golevelup/nestjs-rabbitmq": "^3.4.0",
-    "@nestjs/axios": "^1.0.1",
     "@nestjs/common": "^9.0.0",
     "@nestjs/config": "^2.2.0",
     "@nestjs/core": "^9.0.0",
     "@nestjs/mapped-types": "*",
     "@nestjs/platform-express": "^9.0.0",
-    "@nestjs/throttler": "^3.1.0",
     "@prisma/client": "^4.8.1",
-    "amqp-connection-manager": "^4.1.10",
-    "amqplib": "^0.10.3",
-    "call-rate-limiter": "^0.1.0",
     "https-proxy-agent": "^5.0.1",
+    "nestjs-http-promise": "^2.0.0",
+    "nestjs-rmq": "^2.8.0",
     "phone": "^3.1.32",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.2.0"

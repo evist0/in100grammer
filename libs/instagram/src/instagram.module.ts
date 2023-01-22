@@ -1,8 +1,8 @@
 import { Logger, Module } from '@nestjs/common';
 import { InstagramService } from './instagram.service';
-import { HttpModule } from '@nestjs/axios';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SessionModule, SessionService } from '@app/session';
+import { HttpModule } from 'nestjs-http-promise';
 
 @Module({
   imports: [
