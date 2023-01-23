@@ -1,7 +1,7 @@
 import { Controller, Logger, Param, Post, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
-import { RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import { Nack, RabbitSubscribe, requeueErrorHandler } from '@golevelup/nestjs-rabbitmq';
 
 import { AppService } from './app.service';
 import { DIRECT_EXCHANGE, QUEUE_NAME } from './app.consts';
@@ -31,24 +31,25 @@ export class AppController {
     createQueueIfNotExists: true,
     allowNonJsonMessages: true,
     queueOptions: {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      overflow: 'reject-publish',
       durable: true,
-      bindQueueArguments: {
+      maxLength: 10000,
+      arguments: {
         'x-message-deduplication': true,
       },
     },
+    errorHandler: requeueErrorHandler,
   })
-  @UseGuards(RmqThrottlerGuard)
   async process(id: string) {
     this.logger.log(`[${id}]: Processing started`);
 
     try {
       await this.appService.process(id);
     } catch (e) {
-      this.logger.error(e);
-
-      if (e instanceof NoFreeResourcesError) {
-        process.exit(1);
-      }
+      process.exit(1);
+      return new Nack(true);
     }
   }
 }

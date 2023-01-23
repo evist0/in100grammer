@@ -34,6 +34,7 @@ import { CountryDetector } from './common/country-detector';
           ],
           channels: {
             default: {
+              prefetchCount: 1,
               default: true,
             },
           },

@@ -39,7 +39,8 @@ export class InstagramService {
                 this.logger.error(error.response.data);
 
                 if (error.response.data.message === 'checkpoint_required') {
-                  await this.sessionService.changeSession(true);
+                  await this.sessionService.changeSession();
+                  throw error;
                 }
               }
 
@@ -48,7 +49,7 @@ export class InstagramService {
               }
 
               this.logger.error(`Unknown error:`);
-              this.logger.error(error);
+              this.logger.error(error.response.data);
             },
           }),
         );
@@ -90,7 +91,7 @@ export class InstagramService {
             delay: async (error) => {
               if (error instanceof AxiosError) {
                 this.logger.error(`[${userId}]: AxiosError ${error.message}`);
-                this.logger.error(error);
+                this.logger.error(error.response.data);
               }
 
               if (error instanceof NoFreeResourcesError) {
@@ -98,6 +99,7 @@ export class InstagramService {
               }
 
               await this.sessionService.changeSession();
+              throw error;
             },
           }),
         ),
@@ -123,7 +125,7 @@ export class InstagramService {
             delay: async (error) => {
               if (error instanceof AxiosError) {
                 this.logger.error(`[${userId}]: AxiosError ${error.message}`);
-                this.logger.error(error);
+                this.logger.error(error.response.data);
               }
 
               if (error instanceof NoFreeResourcesError) {
@@ -131,6 +133,7 @@ export class InstagramService {
               }
 
               await this.sessionService.changeSession();
+              throw error;
             },
           }),
         ),

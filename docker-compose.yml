@@ -50,7 +50,7 @@ services:
       - .env
     environment:
       RABBITMQ_HOST: "rabbitmq:5672"
-      DATABASE_URL: "postgresql://admin:123456As@postgres:5432/database?schema=public"
+      DATABASE_URL: "postgresql://postgres:p0stgr3s@postgres:5432/database?schema=public"
 
   in100grammer-1:
     image: in100grammer-in100grammer-0
@@ -65,7 +65,7 @@ services:
       - .env
     environment:
       RABBITMQ_HOST: "rabbitmq:5672"
-      DATABASE_URL: "postgresql://admin:123456As@postgres:5432/database?schema=public"
+      DATABASE_URL: "postgresql://postgres:p0stgr3s@postgres:5432/database?schema=public"
 
   in100grammer-2:
     image: in100grammer-in100grammer-0
@@ -80,7 +80,7 @@ services:
       - .env
     environment:
       RABBITMQ_HOST: "rabbitmq:5672"
-      DATABASE_URL: "postgresql://admin:123456As@postgres:5432/database?schema=public"
+      DATABASE_URL: "postgresql://postgres:p0stgr3s@postgres:5432/database?schema=public"
 
 volumes:
   rabbitmq:

@@ -99,13 +99,6 @@ export async function release(resources: { proxy?: AxiosProxyConfig; sessionId?:
 }
 
 export async function markDead(resources: { proxy?: AxiosProxyConfig; sessionId?: string }, prisma: PrismaClient) {
-  if (resources.proxy) {
-    await prisma.proxy.update({
-      where: { host: resources.proxy.host },
-      data: { busy: false, dead: true },
-    });
-  }
-
   if (resources.sessionId) {
     await prisma.session.update({
       where: { id: resources.sessionId },

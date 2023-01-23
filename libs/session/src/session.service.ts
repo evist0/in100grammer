@@ -35,27 +35,11 @@ export class SessionService implements OnModuleDestroy {
     return this._sessionId;
   }
 
-  async changeSession(shouldMarkDead = false) {
-    this.logger.log(`Changing session`);
-
+  async changeSession() {
     const currentResources = { proxy: this._proxy, sessionId: this._sessionId };
-    if (shouldMarkDead) {
-      await markDead(currentResources, this.prisma);
-    } else {
-      await release(currentResources, this.prisma);
-    }
 
-    const { proxy, sessionId } = await get(this.prisma);
-
-    this._proxy = proxy;
-    this._sessionId = sessionId;
-
-    this._httpsAgent = new HttpsProxyAgent(
-      `${this._proxy.protocol}://${this._proxy.auth.username}:${this._proxy.auth.password}@${this._proxy.host}:${this._proxy.port}`,
-    );
-
-    this.logger.log(`New proxy: ${proxy.host}`);
-    this.logger.log(`New session: ${sessionId}`);
+    await markDead(currentResources, this.prisma);
+    await release({ proxy: currentResources.proxy }, this.prisma);
   }
 
   async onModuleDestroy() {
