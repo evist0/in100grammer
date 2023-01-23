@@ -34,19 +34,9 @@ model User {
   countryReason String?
 }
 
-model Accounts {
+model Session {
   iam String @id
 
-  busy Boolean
-  dead Boolean
-}
-
-model Proxy {
-  host     String @id
-  port     String
-  login    String
-  password String
-
-  busy Boolean
-  dead Boolean
+  busy Boolean @default(false)
+  dead Boolean @default(false)
 }

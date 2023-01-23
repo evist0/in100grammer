@@ -1,30 +1,28 @@
 import { Inject, Logger, OnModuleDestroy } from '@nestjs/common';
 import { PrismaService } from '@app/prisma';
-import { AxiosProxyConfig } from 'axios';
-import { HttpsProxyAgent } from 'https-proxy-agent';
+import { HttpsProxyAgent } from 'hpagent';
 
 import { SESSION_OPTIONS } from './session.constants';
-import { get, markDead, release } from './helpers';
+import { getIam, markDead, release } from './helpers';
 import { SessionOptions } from './types';
 
 export class SessionService implements OnModuleDestroy {
-  private _proxy: AxiosProxyConfig;
+  private _iam: string;
 
   private _sessionCookies: string;
 
   private _httpsAgent: HttpsProxyAgent;
 
-  constructor(
-    @Inject(SESSION_OPTIONS) private readonly options: SessionOptions,
-    private readonly prisma: PrismaService,
-    private readonly logger: Logger,
-  ) {
-    this._proxy = options.proxy;
-    this._sessionCookies = options.sessionCookies;
+  private set iam(value: string) {
+    this._iam = value;
 
-    this._httpsAgent = new HttpsProxyAgent(
-      `${this._proxy.protocol}://${this._proxy.auth.username}:${this._proxy.auth.password}@${this._proxy.host}:${this._proxy.port}`,
-    );
+    const parts = value.split('|');
+
+    this._sessionCookies = parts[3];
+    this._httpsAgent = new HttpsProxyAgent({
+      keepAlive: true,
+      proxy: `http://${parts[4]}`,
+    });
   }
 
   get httpsAgent(): HttpsProxyAgent {
@@ -35,27 +33,23 @@ export class SessionService implements OnModuleDestroy {
     return this._sessionCookies;
   }
 
+  constructor(
+    @Inject(SESSION_OPTIONS) iam: SessionOptions,
+    private readonly prisma: PrismaService,
+    private readonly logger: Logger,
+  ) {
+    this.iam = iam;
+  }
+
   async changeSession() {
     this.logger.log(`Changing session`);
 
-    const currentResources = { proxy: this._proxy, sessionId: this._sessionCookies };
+    await markDead(this._iam, this.prisma);
 
-    await markDead(currentResources, this.prisma);
-
-    const { proxy, sessionId } = await get(this.prisma);
-
-    this._proxy = proxy;
-    this._sessionCookies = sessionId;
-
-    this._httpsAgent = new HttpsProxyAgent(
-      `${this._proxy.protocol}://${this._proxy.auth.username}:${this._proxy.auth.password}@${this._proxy.host}:${this._proxy.port}`,
-    );
-
-    this.logger.log(`New proxy: ${proxy.host}`);
-    this.logger.log(`New session: ${sessionId}`);
+    this.iam = await getIam(this.prisma);
   }
 
   async onModuleDestroy() {
-    await release({ proxy: this._proxy, iam: this._sessionCookies }, this.prisma);
+    await release(this._iam, this.prisma);
   }
 }

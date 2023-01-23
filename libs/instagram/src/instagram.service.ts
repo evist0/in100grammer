@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NoFreeResourcesError, SessionService } from '@app/session';
-import { HttpService } from 'nestjs-http-promise';
-import { concat, defer, EMPTY, from, map, mergeMap, Observable, retry, tap } from 'rxjs';
+import { concat, defer, EMPTY, firstValueFrom, from, map, mergeMap, Observable, retry, tap } from 'rxjs';
+import { HttpService } from '@nestjs/axios';
 
 import { FriendshipsResult, FriendshipUser } from './types/friendships.result';
 import { InfoResult } from './types/info.result';
@@ -17,40 +17,24 @@ export class InstagramService {
 
   private friendshipMethod(userId: string, expectedAmount: number, method: string) {
     const fetchPage = (offset = 0): Observable<FriendshipsResult> =>
-      from(
-        this.httpClient.get<FriendshipsResult>(`friendships/${userId}/${method}`, {
+      this.httpClient
+        .get<FriendshipsResult>(`friendships/${userId}/${method}`, {
           httpsAgent: this.sessionService.httpsAgent,
           headers: {
-            Cookie: `sessionid=${this.sessionService.sessionCookies}`,
+            Cookie: this.sessionService.sessionCookies,
           },
           params: {
             count: 200,
             maxCount: offset,
           },
-        }),
-      ).pipe(
-        map((res) => res.data),
-        tap(() => this.logger.log(`[${userId}]: Processed ${offset}/${expectedAmount} ${method}`)),
-        retry({
-          delay: async (error) => {
-            if (error.isAxiosError) {
-              this.logger.error(`[${userId}]: Request error — ${error.message}`);
-              this.logger.error(error.response.data);
-
-              if (error.response.data.message === 'checkpoint_required') {
-                await this.sessionService.changeSession();
-              }
-            }
-
-            if (error instanceof NoFreeResourcesError) {
-              throw error;
-            }
-
-            this.logger.error(`Unknown error:`);
-            this.logger.error(error);
-          },
-        }),
-      );
+        })
+        .pipe(
+          map((res) => res.data),
+          tap(() => this.logger.log(`[${userId}]: Processed ${offset}/${expectedAmount} ${method}`)),
+          retry({
+            delay: async (error) => this.handleError(userId, error),
+          }),
+        );
 
     const getPage = (offset = 0) =>
       defer(() => fetchPage(offset)).pipe(
@@ -76,45 +60,67 @@ export class InstagramService {
   }
 
   async getUserInfo(userId: string) {
-    const tryGetUserInfo = async () => {
-      const { data } = await this.httpClient.get<InfoResult>(`users/${userId}/info`, {
-        httpsAgent: this.sessionService.httpsAgent,
-        headers: {
-          Cookie: `sessionid=${this.sessionService.sessionCookies}`,
-        },
-      });
+    const { data } = await firstValueFrom(
+      this.httpClient
+        .get<InfoResult>(`users/${userId}/info`, {
+          httpsAgent: this.sessionService.httpsAgent,
+          headers: {
+            Cookie: this.sessionService.sessionCookies,
+          },
+        })
+        .pipe(
+          retry({
+            delay: async (error) => this.handleError(userId, error),
+          }),
+        ),
+    );
 
-      return data;
-    };
-
-    let result: InfoResult;
-    while (result === undefined) {
-      result = await tryGetUserInfo();
-    }
-
-    return result.user;
+    return data.user;
   }
 
   async getUserPosts(userId: string) {
-    const tryGetPosts = async () => {
-      const { data } = await this.httpClient.get<PostsResult>(`feed/user/${userId}`, {
-        httpsAgent: this.sessionService.httpsAgent,
-        headers: {
-          Cookie: `sessionid=${this.sessionService.sessionCookies}`,
-        },
-        params: {
-          limit: 12,
-        },
-      });
+    const { data } = await firstValueFrom(
+      this.httpClient
+        .get<PostsResult>(`feed/user/${userId}`, {
+          httpsAgent: this.sessionService.httpsAgent,
+          headers: {
+            Cookie: this.sessionService.sessionCookies,
+          },
+          params: {
+            limit: 12,
+          },
+        })
+        .pipe(
+          retry({
+            delay: async (error) => this.handleError(userId, error),
+          }),
+        ),
+    );
 
-      return data;
-    };
+    return data.items;
+  }
 
-    let result: PostsResult;
-    while (result === undefined) {
-      result = await tryGetPosts();
+  private async handleError(userId: string, error: any) {
+    if (error.isAxiosError) {
+      this.logger.log(error.request._header);
+
+      this.logger.error(`[${userId}]: Request error — ${error.message}`);
+      this.logger.error(error.response.data);
+
+      if (
+        error.response.data.message === 'challenge_required' ||
+        error.response.status === 401 ||
+        error.response.status === 403
+      ) {
+        return this.sessionService.changeSession();
+      }
     }
 
-    return result.items;
+    if (error instanceof NoFreeResourcesError) {
+      throw error;
+    }
+
+    this.logger.error(`Unknown error:`);
+    this.logger.error(error);
   }
 }

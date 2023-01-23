@@ -2,7 +2,7 @@ import { Logger, Module } from '@nestjs/common';
 import { InstagramService } from './instagram.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SessionModule, SessionService } from '@app/session';
-import { HttpModule } from 'nestjs-http-promise';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
@@ -12,6 +12,7 @@ import { HttpModule } from 'nestjs-http-promise';
         headers: {
           'User-Agent': configService.get('INSTAGRAM_USER_AGENT'),
         },
+        withCredentials: true,
       }),
       imports: [SessionModule, ConfigModule],
       inject: [SessionService, ConfigService],

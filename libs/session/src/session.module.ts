@@ -4,7 +4,7 @@ import * as fs from 'fs';
 
 import { SessionService } from './session.service';
 import { SESSION_OPTIONS } from './session.constants';
-import { get, INITIAL_PROXY_FILE } from './helpers';
+import { getIam, INITIAL_PROXY_FILE } from './helpers';
 
 @Global()
 @Module({})
@@ -21,16 +21,14 @@ export class SessionModule {
         {
           provide: SESSION_OPTIONS,
           inject: [PrismaService, Logger],
-          useFactory: async (prisma: PrismaService, logger: Logger) => {
-            const result = await get(prisma);
-
-            logger.log(`Proxy: ${result.proxy.host}`);
-            logger.log(`Session: ${result.sessionId}`);
+          useFactory: async (prisma: PrismaService) => {
+            const iam = await getIam(prisma);
 
             // Ресурсы, которые необходимо освободить в main.ts в случае неудачной инициализации
-            fs.writeFileSync(INITIAL_PROXY_FILE, JSON.stringify(result), 'utf-8');
+            // apps/in100grammer/src/main.ts
+            fs.writeFileSync(INITIAL_PROXY_FILE, JSON.stringify({ iam }), 'utf-8');
 
-            return result;
+            return iam;
           },
         },
         SessionService,
