@@ -34,6 +34,7 @@ import { CountryDetector } from './common/country-detector';
           ],
           channels: {
             default: {
+              prefetchCount: 10,
               default: true,
             },
           },
@@ -44,10 +45,6 @@ import { CountryDetector } from './common/country-detector';
     PrismaModule,
     InstagramModule,
     NominatimModule,
-    ThrottlerModule.forRoot({
-      ttl: 60 * 60, // 1h,
-      limit: 200, // 200 requests,
-    }),
   ],
   controllers: [AppController],
   providers: [

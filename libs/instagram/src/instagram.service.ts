@@ -1,12 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import { NoFreeResourcesError, SessionService } from '@app/session';
+import { SessionService } from '@app/session';
 import { concat, defer, EMPTY, firstValueFrom, from, map, mergeMap, Observable, retry, tap } from 'rxjs';
 import { AxiosError } from 'axios';
 
 import { FriendshipsResult, FriendshipUser } from './types/friendships.result';
 import { InfoResult } from './types/info.result';
 import { PostsResult } from './types/posts.result';
+import { AccountError, PrivateAccountError, ProxyError } from './types/private-account.error';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 
 @Injectable()
 export class InstagramService {
@@ -16,7 +18,28 @@ export class InstagramService {
     private readonly sessionService: SessionService,
   ) {}
 
+  private _errorHandler = (httpsAgent: HttpsProxyAgent, sessionId: string) => async (error) => {
+    if (error instanceof AxiosError) {
+      if (error.response.data.message === 'Not authorized to view user') {
+        throw new PrivateAccountError();
+      }
+
+      if (error.response.data.message === 'Please wait a few minutes before you try again.') {
+        throw new ProxyError(httpsAgent);
+      }
+
+      if (error.response.data.message === 'checkpoint_required') {
+        throw new AccountError(sessionId);
+      }
+    }
+
+    throw error;
+  };
+
   private friendshipMethod(userId: string, expectedAmount: number, method: string) {
+    const httpsAgent = this.sessionService.httpsAgent;
+    const sessionId = this.sessionService.sessionId;
+
     const fetchPage = (offset = 0): Observable<FriendshipsResult> =>
       this.httpClient
         .get<FriendshipsResult>(`friendships/${userId}/${method}`, {
@@ -33,23 +56,7 @@ export class InstagramService {
           map((res) => res.data),
           tap(() => this.logger.log(`[${userId}]: Processed ${offset}/${expectedAmount} ${method}`)),
           retry({
-            delay: async (error) => {
-              if (error instanceof AxiosError) {
-                this.logger.error(`[${userId}]: AxiosError ${error.message}`);
-                this.logger.error(error.response.data);
-
-                if (error.response.data.message === 'checkpoint_required') {
-                  await this.sessionService.changeSession(true);
-                }
-              }
-
-              if (error instanceof NoFreeResourcesError) {
-                throw error;
-              }
-
-              this.logger.error(`Unknown error:`);
-              this.logger.error(error);
-            },
+            delay: this._errorHandler(httpsAgent, sessionId),
           }),
         );
 
@@ -77,28 +84,20 @@ export class InstagramService {
   }
 
   async getUserInfo(userId: string): Promise<InfoResult['user']> {
+    const httpsAgent = this.sessionService.httpsAgent;
+    const sessionId = this.sessionService.sessionId;
+
     const { data } = await firstValueFrom(
       this.httpClient
         .get<InfoResult>(`users/${userId}/info`, {
-          httpsAgent: this.sessionService.httpsAgent,
+          httpsAgent,
           headers: {
-            Cookie: `sessionid=${this.sessionService.sessionId}`,
+            Cookie: `sessionid=${sessionId}`,
           },
         })
         .pipe(
           retry({
-            delay: async (error) => {
-              if (error instanceof AxiosError) {
-                this.logger.error(`[${userId}]: AxiosError ${error.message}`);
-                this.logger.error(error);
-              }
-
-              if (error instanceof NoFreeResourcesError) {
-                throw error;
-              }
-
-              await this.sessionService.changeSession();
-            },
+            delay: this._errorHandler(httpsAgent, sessionId),
           }),
         ),
     );
@@ -107,12 +106,15 @@ export class InstagramService {
   }
 
   async getUserPosts(userId: string) {
+    const httpsAgent = this.sessionService.httpsAgent;
+    const sessionId = this.sessionService.sessionId;
+
     const { data } = await firstValueFrom(
       this.httpClient
         .get<PostsResult>(`feed/user/${userId}`, {
-          httpsAgent: this.sessionService.httpsAgent,
+          httpsAgent,
           headers: {
-            Cookie: `sessionid=${this.sessionService.sessionId}`,
+            Cookie: `sessionid=${sessionId}`,
           },
           params: {
             limit: 12,
@@ -120,18 +122,7 @@ export class InstagramService {
         })
         .pipe(
           retry({
-            delay: async (error) => {
-              if (error instanceof AxiosError) {
-                this.logger.error(`[${userId}]: AxiosError ${error.message}`);
-                this.logger.error(error);
-              }
-
-              if (error instanceof NoFreeResourcesError) {
-                throw error;
-              }
-
-              await this.sessionService.changeSession();
-            },
+            delay: this._errorHandler(httpsAgent, sessionId),
           }),
         ),
     );

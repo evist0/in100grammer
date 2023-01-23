@@ -39,39 +39,26 @@ export class AppService {
       return;
     }
 
-    await this.prisma.user.create({
-      data: {
-        id,
-      },
-    });
-
     const userInfo = await this.instagramService.getUserInfo(id);
     this.logger.log(`[${id}]: User information received`);
 
     const posts = await this.instagramService.getUserPosts(id);
-    const lastPostTime = posts.length > 1 ? posts[0].taken_at * 1000 : undefined;
     this.logger.log(`[${id}]: User posts received`);
 
-    const { countryCode, countryReason } = await this.countryDetector.getCountry(userInfo);
+    const lastPostTime = posts.length > 1 ? posts[0].taken_at * 1000 : undefined;
+
+    const { countryCode, countryReason } = await this.countryDetector.getCountry(userInfo, posts);
     this.logger.log(`[${id}]: Country — '${countryCode}', because ${countryReason}`);
 
-    // if (userInfo.follower_count < 10_000) {
-    //   this.instagramService
-    //     .getFollowers(id, userInfo.follower_count)
-    //     .pipe(filter((f) => !f.is_private))
-    //     .subscribe((follower) => this.enqueue(follower.pk.toString()));
-    // } else {
-    //   this.logger.log(`[${id}]: Over 10,000 followers. Skipping`);
-    // }
-    //
-    // if (userInfo.following_count < 10_000) {
-    //   this.instagramService
-    //     .getFollowings(id, userInfo.follower_count)
-    //     .pipe(filter((f) => !f.is_private))
-    //     .subscribe((following) => this.enqueue(following.pk.toString()));
-    // } else {
-    //   this.logger.log(`[${id}]: Over 10,000 following. Skipping`);
-    // }
+    this.instagramService
+      .getFollowers(id, userInfo.follower_count)
+      .pipe(filter((f) => !f.is_private))
+      .subscribe((follower) => this.enqueue(follower.pk.toString()));
+
+    this.instagramService
+      .getFollowings(id, userInfo.following_count)
+      .pipe(filter((f) => !f.is_private))
+      .subscribe((follower) => this.enqueue(follower.pk.toString()));
 
     const user = createUser(userInfo, {
       lastPost: new Date(lastPostTime),
@@ -79,8 +66,7 @@ export class AppService {
       countryReason,
     });
 
-    await this.prisma.user.update({
-      where: { id },
+    await this.prisma.user.create({
       data: user,
     });
   }

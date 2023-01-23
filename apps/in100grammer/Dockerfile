@@ -26,7 +26,7 @@ RUN yarn nest build in100grammer
 
 ENV NODE_ENV production
 
-RUN yarn install --prod --frozen-lockfile
+RUN yarn install
 
 USER node
 

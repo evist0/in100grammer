@@ -4,7 +4,7 @@ import { AxiosProxyConfig } from 'axios';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 
 import { SESSION_OPTIONS } from './session.constants';
-import { get, markDead, release } from './helpers';
+import { getProxy, getSession, release } from './helpers';
 import { SessionOptions } from './types';
 
 export class SessionService implements OnModuleDestroy {
@@ -19,8 +19,12 @@ export class SessionService implements OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly logger: Logger,
   ) {
-    this._proxy = options.proxy;
+    this.proxy = options.proxy;
     this._sessionId = options.sessionId;
+  }
+
+  private set proxy(value: AxiosProxyConfig) {
+    this._proxy = value;
 
     this._httpsAgent = new HttpsProxyAgent(
       `${this._proxy.protocol}://${this._proxy.auth.username}:${this._proxy.auth.password}@${this._proxy.host}:${this._proxy.port}`,
@@ -35,27 +39,50 @@ export class SessionService implements OnModuleDestroy {
     return this._sessionId;
   }
 
-  async changeSession(shouldMarkDead = false) {
-    this.logger.log(`Changing session`);
-
-    const currentResources = { proxy: this._proxy, sessionId: this._sessionId };
-    if (shouldMarkDead) {
-      await markDead(currentResources, this.prisma);
-    } else {
-      await release(currentResources, this.prisma);
+  async changeSession(sessionId: string) {
+    // Возможно долетела ошибка уже после того как поменяли.
+    if (sessionId !== this._sessionId) {
+      return;
     }
 
-    const { proxy, sessionId } = await get(this.prisma);
+    // Помечаем как мёртвую
+    await this.prisma.session.update({
+      where: {
+        id: this._sessionId,
+      },
+      data: {
+        busy: false,
+        dead: true,
+      },
+    });
 
-    this._proxy = proxy;
-    this._sessionId = sessionId;
+    // Получаем новую
+    this._sessionId = await getSession(this.prisma);
+  }
 
-    this._httpsAgent = new HttpsProxyAgent(
-      `${this._proxy.protocol}://${this._proxy.auth.username}:${this._proxy.auth.password}@${this._proxy.host}:${this._proxy.port}`,
-    );
+  async changeProxy(httpsAgent: HttpsProxyAgent) {
+    // Возможно долетела ошибка уже после того как поменяли.
+    // 'proxy' есть в объекте httpsAgent, но в типах не указано..
 
-    this.logger.log(`New proxy: ${proxy.host}`);
-    this.logger.log(`New session: ${sessionId}`);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    if (httpsAgent.proxy.host !== this._proxy.host) {
+      return;
+    }
+
+    // Помечаем как мёртвую
+    await this.prisma.proxy.update({
+      where: {
+        host: this._proxy.host,
+      },
+      data: {
+        busy: false,
+        dead: true,
+      },
+    });
+
+    // Получаем новую
+    this.proxy = await getProxy(this.prisma);
   }
 
   async onModuleDestroy() {

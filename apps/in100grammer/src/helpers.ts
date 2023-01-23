@@ -22,7 +22,7 @@ const userAdapter = (userInfo: InfoResult['user']): UserData => ({
   site: userInfo.external_url,
   potentiallyBusiness: userInfo.is_potential_business,
   business: userInfo.is_business,
-  businessCategory: userInfo.category,
+  businessCategory: userInfo.category?.length > 0 ? userInfo.category : null,
 });
 
 export const createUser = (userInfo: InfoResult['user'], enrichment: Enrichment): User =>

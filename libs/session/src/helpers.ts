@@ -3,11 +3,7 @@ import { AxiosProxyConfig } from 'axios';
 
 export const INITIAL_PROXY_FILE = 'initial_proxy.json';
 
-export class NoFreeResourcesError extends Error {
-  constructor(props: string) {
-    super(props);
-  }
-}
+export class NoFreeResourcesError extends Error {}
 
 export const proxyAdapter = (databaseProxy: Proxy): AxiosProxyConfig => ({
   protocol: 'http',
@@ -95,21 +91,5 @@ export async function release(resources: { proxy?: AxiosProxyConfig; sessionId?:
 
   if (resources.sessionId) {
     await prisma.session.update({ where: { id: resources.sessionId }, data: { busy: false } });
-  }
-}
-
-export async function markDead(resources: { proxy?: AxiosProxyConfig; sessionId?: string }, prisma: PrismaClient) {
-  if (resources.proxy) {
-    await prisma.proxy.update({
-      where: { host: resources.proxy.host },
-      data: { busy: false, dead: true },
-    });
-  }
-
-  if (resources.sessionId) {
-    await prisma.session.update({
-      where: { id: resources.sessionId },
-      data: { busy: false, dead: true },
-    });
   }
 }

@@ -1,19 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@app/prisma';
-import { INITIAL_PROXY_FILE, release, SessionService } from '@app/session';
+import { INITIAL_PROXY_FILE, release } from '@app/session';
 import { PrismaClient } from '@prisma/client';
 import * as fs from 'fs';
 
 import { AppModule } from './app.module';
-import { AllExceptionFilter } from './common/exception.filter';
 
 async function bootstrap() {
   try {
     const app = await NestFactory.create(AppModule, { abortOnError: false });
-
-    const sessionService = app.get(SessionService);
-    app.useGlobalFilters(new AllExceptionFilter(sessionService));
 
     const prismaService = app.get(PrismaService);
     prismaService.enableShutdownHooks(app);
