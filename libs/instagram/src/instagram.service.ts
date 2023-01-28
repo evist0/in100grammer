@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { SessionService } from '@app/session';
-import { concat, defer, EMPTY, firstValueFrom, from, map, mergeMap, Observable, retry, tap } from 'rxjs';
+import { catchError, concat, defer, EMPTY, firstValueFrom, from, map, mergeMap, Observable, retry, tap } from 'rxjs';
 import { AxiosError } from 'axios';
 
 import { FriendshipsResult, FriendshipUser } from './types/friendships.result';
 import { InfoResult } from './types/info.result';
 import { PostsResult } from './types/posts.result';
-import { AccountError, PrivateAccountError, ProxyError } from './types/private-account.error';
+import { AccountError, AccountNotFoundError, PrivateAccountError, ProxyError } from './types/errors';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 
 @Injectable()
@@ -19,17 +19,25 @@ export class InstagramService {
   ) {}
 
   private _errorHandler = (httpsAgent: HttpsProxyAgent, sessionId: string) => async (error) => {
-    if (error instanceof AxiosError) {
+    if (error instanceof AxiosError && error?.response?.data) {
       if (error.response.data.message === 'Not authorized to view user') {
         throw new PrivateAccountError();
       }
 
-      if (error.response.data.message === 'Please wait a few minutes before you try again.') {
-        throw new ProxyError(httpsAgent);
+      if (error.response.status === 404) {
+        throw new AccountNotFoundError();
       }
 
-      if (error.response.data.message === 'checkpoint_required') {
+      if (
+        error.response.data?.message === 'challenge_required' ||
+        error.response.status === 401 ||
+        error.response.status === 403
+      ) {
         throw new AccountError(sessionId);
+      }
+
+      if (error.response.status === 429) {
+        throw new ProxyError(httpsAgent);
       }
     }
 
@@ -55,9 +63,7 @@ export class InstagramService {
         .pipe(
           map((res) => res.data),
           tap(() => this.logger.log(`[${userId}]: Processed ${offset}/${expectedAmount} ${method}`)),
-          retry({
-            delay: this._errorHandler(httpsAgent, sessionId),
-          }),
+          catchError(this._errorHandler(httpsAgent, sessionId)),
         );
 
     const getPage = (offset = 0) =>
@@ -95,11 +101,7 @@ export class InstagramService {
             Cookie: `sessionid=${sessionId}`,
           },
         })
-        .pipe(
-          retry({
-            delay: this._errorHandler(httpsAgent, sessionId),
-          }),
-        ),
+        .pipe(catchError(this._errorHandler(httpsAgent, sessionId))),
     );
 
     return data.user;
@@ -120,11 +122,7 @@ export class InstagramService {
             limit: 12,
           },
         })
-        .pipe(
-          retry({
-            delay: this._errorHandler(httpsAgent, sessionId),
-          }),
-        ),
+        .pipe(catchError(this._errorHandler(httpsAgent, sessionId))),
     );
 
     return data.items;

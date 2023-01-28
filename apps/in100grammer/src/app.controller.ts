@@ -2,7 +2,7 @@ import { Controller, Logger, Param, Post } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import { Nack, RabbitSubscribe, requeueErrorHandler } from '@golevelup/nestjs-rabbitmq';
-import { AccountError, PrivateAccountError, ProxyError } from '@app/instagram';
+import { AccountError, AccountNotFoundError, PrivateAccountError, ProxyError } from '@app/instagram';
 
 import { AppService } from './app.service';
 import { DIRECT_EXCHANGE, QUEUE_NAME } from './app.consts';
@@ -49,11 +49,11 @@ export class AppController {
     try {
       await this.appService.process(id);
     } catch (e) {
-      this.logger.error(e.stack);
-
-      if (e instanceof PrivateAccountError) {
+      if (e instanceof PrivateAccountError || e instanceof AccountNotFoundError) {
         return;
-      } else if (e instanceof ProxyError) {
+      }
+
+      if (e instanceof ProxyError) {
         await this.sessionService.changeProxy(e.httpsAgent).catch(() => {
           this.logger.error('No free proxy');
           process.exit(1);

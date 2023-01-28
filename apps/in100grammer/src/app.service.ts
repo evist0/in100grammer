@@ -50,15 +50,17 @@ export class AppService {
     const { countryCode, countryReason } = await this.countryDetector.getCountry(userInfo, posts);
     this.logger.log(`[${id}]: Country — '${countryCode}', because ${countryReason}`);
 
-    this.instagramService
-      .getFollowers(id, userInfo.follower_count)
-      .pipe(filter((f) => !f.is_private))
-      .subscribe((follower) => this.enqueue(follower.pk.toString()));
+    if (countryCode === 'MX') {
+      this.instagramService
+        .getFollowers(id, userInfo.follower_count)
+        .pipe(filter((f) => !f.is_private))
+        .subscribe((follower) => this.enqueue(follower.pk.toString()));
 
-    this.instagramService
-      .getFollowings(id, userInfo.following_count)
-      .pipe(filter((f) => !f.is_private))
-      .subscribe((follower) => this.enqueue(follower.pk.toString()));
+      this.instagramService
+        .getFollowings(id, userInfo.following_count)
+        .pipe(filter((f) => !f.is_private))
+        .subscribe((follower) => this.enqueue(follower.pk.toString()));
+    }
 
     const user = createUser(userInfo, {
       lastPost: new Date(lastPostTime),

@@ -6,6 +6,12 @@ export class PrivateAccountError extends Error {
   }
 }
 
+export class AccountNotFoundError extends Error {
+  constructor() {
+    super('AccountNotFoundError');
+  }
+}
+
 export class ProxyError extends Error {
   constructor(public readonly httpsAgent: HttpsProxyAgent) {
     super('ProxyError');
