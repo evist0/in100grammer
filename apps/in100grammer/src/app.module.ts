@@ -1,6 +1,5 @@
 import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { InstagramModule } from '@app/instagram';
 import { PrismaModule } from '@app/prisma';
 import { SessionModule } from '@app/session';
@@ -11,6 +10,7 @@ import { AppController } from './app.controller';
 import { DIRECT_EXCHANGE } from './app.consts';
 import { NominatimModule } from './nominatim/nominatim.module';
 import { CountryDetector } from './common/country-detector';
+import { UserService } from './user/user.service';
 
 @Module({
   imports: [
@@ -50,6 +50,7 @@ import { CountryDetector } from './common/country-detector';
   providers: [
     AppService,
     CountryDetector,
+    UserService,
     {
       provide: Logger,
       useValue: new Logger(AppModule.name),

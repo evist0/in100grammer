@@ -19,8 +19,10 @@ export class SessionService implements OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly logger: Logger,
   ) {
-    this.proxy = options.proxy;
-    this._sessionId = options.sessionId;
+    if (options.proxy && options.sessionId) {
+      this.proxy = options.proxy;
+      this._sessionId = options.sessionId;
+    }
   }
 
   private set proxy(value: AxiosProxyConfig) {

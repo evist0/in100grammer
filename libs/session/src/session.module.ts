@@ -24,8 +24,8 @@ export class SessionModule {
           useFactory: async (prisma: PrismaService, logger: Logger) => {
             const result = await get(prisma);
 
-            logger.log(`Proxy: ${result.proxy.host}`);
-            logger.log(`Session: ${result.sessionId}`);
+            logger.log(`Proxy: ${result.proxy?.host}`);
+            logger.log(`Session: ${result?.sessionId}`);
 
             // Ресурсы, которые необходимо освободить в main.ts в случае неудачной инициализации
             fs.writeFileSync(INITIAL_PROXY_FILE, JSON.stringify(result), 'utf-8');

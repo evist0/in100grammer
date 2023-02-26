@@ -26,7 +26,7 @@ export async function get(prisma: PrismaClient) {
     return { proxy, sessionId };
   } catch (e) {
     await release({ proxy, sessionId }, prisma);
-    throw e;
+    return { proxy: undefined, sessionId: undefined };
   }
 }
 

@@ -2,8 +2,8 @@ import { ModuleMetadata, Type } from '@nestjs/common';
 import { AxiosProxyConfig } from 'axios';
 
 export interface SessionOptions {
-  proxy: AxiosProxyConfig;
-  sessionId: string;
+  proxy?: AxiosProxyConfig;
+  sessionId?: string;
 }
 
 export interface SessionOptionsFactory {
