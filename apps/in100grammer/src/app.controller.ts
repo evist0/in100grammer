@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Logger, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get, Logger, Param, Post, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import { Nack, RabbitSubscribe, requeueErrorHandler } from '@golevelup/nestjs-rabbitmq';
@@ -8,9 +8,8 @@ import { AppService } from './app.service';
 import { DIRECT_EXCHANGE, QUEUE_NAME } from './app.consts';
 import { SessionService } from '@app/session';
 import { UserService } from './user/user.service';
-import { Prisma, User } from '@prisma/client';
-import { ApiBody, ApiOkResponse, ApiQuery } from '@nestjs/swagger';
-import { UserEntity } from './user/user.entity';
+import { ApiOkResponse, ApiQuery, getSchemaPath } from '@nestjs/swagger';
+import { PaginatedDto, UserEntity } from './user/user.entity';
 import { IUsersQuery, UsersQuery } from './user/helpers';
 
 @Controller()
@@ -25,12 +24,27 @@ export class AppController {
 
   @Get('users')
   @ApiQuery({ type: UsersQuery })
-  @ApiOkResponse({ status: 200, type: UserEntity, isArray: true })
+  @ApiOkResponse({
+    schema: {
+      allOf: [
+        { $ref: getSchemaPath(PaginatedDto) },
+        {
+          properties: {
+            results: {
+              type: 'array',
+              items: { $ref: getSchemaPath(UserEntity) },
+            },
+          },
+        },
+      ],
+    },
+  })
   async getAllUsers(
     @Query()
     filters: IUsersQuery,
-  ): Promise<User[]> {
-    return this.userService.users(filters);
+  ): Promise<PaginatedDto<UserEntity>> {
+    const [total, data] = await this.userService.users(filters);
+    return { total, results: data, limit: filters.take, offset: filters.skip };
   }
 
   @Throttle(200, 60 * 60)

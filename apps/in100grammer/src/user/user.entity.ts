@@ -35,3 +35,15 @@ export class UserEntity implements User {
   @ApiProperty()
   countryReason: string;
 }
+export class PaginatedDto<TData> {
+  @ApiProperty()
+  total: number;
+
+  @ApiProperty()
+  limit: number;
+
+  @ApiProperty()
+  offset: number;
+
+  results: TData[];
+}

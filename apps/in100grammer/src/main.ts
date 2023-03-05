@@ -7,6 +7,7 @@ import * as fs from 'fs';
 
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { PaginatedDto, UserEntity } from './user/user.entity';
 
 async function bootstrap() {
   try {
@@ -16,9 +17,11 @@ async function bootstrap() {
     prismaService.enableShutdownHooks(app);
 
     const config = new DocumentBuilder().setTitle('int100grammer').setVersion('1.0').build();
-    const document = SwaggerModule.createDocument(app, config);
+    const document = SwaggerModule.createDocument(app, config, {
+      extraModels: [PaginatedDto, UserEntity],
+    });
     SwaggerModule.setup('api', app, document);
-
+    app.enableCors({ origin: ['http://localhost:2000', 'https://localhost:2000'], credentials: true });
     app.enableShutdownHooks();
 
     const configService = app.get(ConfigService);
